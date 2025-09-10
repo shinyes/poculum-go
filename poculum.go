@@ -9,12 +9,9 @@ package main
 import (
 	"bytes"
 	"encoding/binary"
-	"errors"
 	"fmt"
 	"math"
-	"os"
 	"reflect"
-	"strconv"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -657,176 +654,7 @@ func LoadPoculum(data []byte) (Value, error) {
 // 主函数 - 测试和演示
 func main() {
 	fmt.Println("=== poculum Go 测试 ===")
-
-	// 布尔值编码测试
-	fmt.Println("\n--- 布尔值编码测试 ---")
-	testBoolEncoding()
-
-	// 基本类型测试
-	testBasicTypes()
-
-	// 跨平台兼容性测试
-	if len(os.Args) > 1 {
-		testCrossPlatform(os.Args[1])
-	} else {
-		testSelfCompatibility()
-	}
-
-	// 性能测试
 	performanceTest()
-}
-
-func testBoolEncoding() {
-	// 测试布尔值编码
-	trueData, err := DumpPoculum(true)
-	if err != nil {
-		fmt.Printf("编码 true 失败: %v\n", err)
-		return
-	}
-
-	falseData, err := DumpPoculum(false)
-	if err != nil {
-		fmt.Printf("编码 false 失败: %v\n", err)
-		return
-	}
-
-	fmt.Printf("Go 编码 true: %x\n", trueData)
-	fmt.Printf("Go 编码 false: %x\n", falseData)
-}
-
-func testBasicTypes() {
-	fmt.Println("\n--- 基本类型测试 ---")
-
-	testCases := []struct {
-		name  string
-		value Value
-	}{
-		{"整数", uint32(42)},
-		{"负整数", int32(-123)},
-		{"浮点数", 3.14159},
-		{"字符串", "Hello, 世界! 🌍"},
-		{"空字符串", ""},
-		{"数组", []Value{int32(1), int32(2), int32(3), "四", 5.5}},
-		{"空数组", []Value{}},
-		{"字节数据", []byte{72, 101, 108, 108, 111}}, // "Hello"
-	}
-
-	mb := NewPoculum()
-
-	for _, tc := range testCases {
-		serialized, err := mb.dump(tc.value)
-		if err != nil {
-			fmt.Printf("❌ %s: 序列化失败 - %v\n", tc.name, err)
-			continue
-		}
-
-		deserialized, err := mb.load(serialized)
-		if err != nil {
-			fmt.Printf("❌ %s: 反序列化失败 - %v\n", tc.name, err)
-			continue
-		}
-
-		if deepEqual(tc.value, deserialized) {
-			fmt.Printf("✅ %s: 通过 (%d 字节)\n", tc.name, len(serialized))
-		} else {
-			fmt.Printf("❌ %s: 数据不匹配\n", tc.name)
-		}
-	}
-
-	// 测试对象
-	obj := map[string]Value{
-		"name":   "Alice",
-		"age":    uint32(30),
-		"active": uint8(1), // 布尔值作为整数
-	}
-
-	serialized, err := mb.dump(obj)
-	if err != nil {
-		fmt.Printf("❌ 对象: 序列化失败 - %v\n", err)
-	} else {
-		deserialized, err := mb.load(serialized)
-		if err != nil {
-			fmt.Printf("❌ 对象: 反序列化失败 - %v\n", err)
-		} else if deepEqual(obj, deserialized) {
-			fmt.Printf("✅ 对象: 通过 (%d 字节)\n", len(serialized))
-		} else {
-			fmt.Printf("❌ 对象: 数据不匹配\n")
-		}
-	}
-}
-
-func testCrossPlatform(hexData string) {
-	fmt.Println("\n--- 跨平台兼容性测试 ---")
-
-	// 解析十六进制数据
-	data, err := parseHexString(hexData)
-	if err != nil {
-		fmt.Printf("❌ 十六进制解析失败: %v\n", err)
-		return
-	}
-
-	mb := NewPoculum()
-	value, err := mb.load(data)
-	if err != nil {
-		fmt.Printf("❌ 反序列化失败: %v\n", err)
-		return
-	}
-
-	fmt.Println("✅ 成功反序列化其他语言的数据:")
-	printValue(value, 0)
-
-	// 尝试重新序列化
-	reSerialized, err := mb.dump(value)
-	if err != nil {
-		fmt.Printf("❌ 重新序列化失败: %v\n", err)
-	} else {
-		reHex := bytesToHex(reSerialized)
-		fmt.Printf("GO_SERIALIZED:%s\n", reHex)
-	}
-}
-
-func testSelfCompatibility() {
-	fmt.Println("\n--- 自兼容性测试 ---")
-
-	// 创建复杂测试数据
-	testData := map[string]Value{
-		"users": []Value{
-			map[string]Value{
-				"id":   uint32(1),
-				"name": "Alice",
-			},
-			map[string]Value{
-				"id":   uint32(2),
-				"name": "Bob",
-			},
-		},
-		"metadata": map[string]Value{
-			"version": "1.0",
-			"stats":   []Value{uint32(10), uint32(20), uint32(30)},
-		},
-	}
-
-	mb := NewPoculum()
-	serialized, err := mb.dump(testData)
-	if err != nil {
-		fmt.Printf("❌ 序列化失败: %v\n", err)
-		return
-	}
-
-	hex := bytesToHex(serialized)
-	fmt.Printf("序列化数据 (%d 字节): %s\n", len(serialized), hex[:min(32, len(hex))])
-
-	deserialized, err := mb.load(serialized)
-	if err != nil {
-		fmt.Printf("❌ 反序列化失败: %v\n", err)
-		return
-	}
-
-	if deepEqual(testData, deserialized) {
-		fmt.Println("✅ 复杂数据结构序列化/反序列化成功")
-	} else {
-		fmt.Println("❌ 复杂数据结构验证失败")
-	}
 }
 
 func performanceTest() {
@@ -834,7 +662,7 @@ func performanceTest() {
 
 	// 创建测试数据
 	testData := createPerformanceTestData()
-	mb := NewPoculum()
+	poc := NewPoculum()
 
 	iterations := 1000
 
@@ -842,14 +670,14 @@ func performanceTest() {
 	start := time.Now()
 	var serialized []byte
 	for i := 0; i < iterations; i++ {
-		serialized, _ = mb.dump(testData)
+		serialized, _ = poc.dump(testData)
 	}
 	serializeTime := time.Since(start)
 
 	// 反序列化性能测试
 	start = time.Now()
 	for i := 0; i < iterations; i++ {
-		mb.load(serialized)
+		poc.load(serialized)
 	}
 	deserializeTime := time.Since(start)
 
@@ -895,38 +723,7 @@ func createPerformanceTestData() map[string]Value {
 	}
 }
 
-// 辅助函数
-func deepEqual(a, b Value) bool {
-	// 简化的深度比较，实际项目中可能需要更复杂的实现
-	return fmt.Sprintf("%v", a) == fmt.Sprintf("%v", b)
-}
-
-func parseHexString(hexStr string) ([]byte, error) {
-	if len(hexStr)%2 != 0 {
-		return nil, errors.New("hex string length must be even")
-	}
-
-	data := make([]byte, len(hexStr)/2)
-	for i := 0; i < len(hexStr); i += 2 {
-		b, err := strconv.ParseUint(hexStr[i:i+2], 16, 8)
-		if err != nil {
-			return nil, err
-		}
-		data[i/2] = byte(b)
-	}
-
-	return data, nil
-}
-
-func bytesToHex(data []byte) string {
-	var sb strings.Builder
-	for _, b := range data {
-		sb.WriteString(fmt.Sprintf("%02x", b))
-	}
-	return sb.String()
-}
-
-func printValue(value Value, indent int) {
+func PrintValue(value Value, indent int) {
 	prefix := strings.Repeat("  ", indent)
 	switch v := value.(type) {
 	case uint8:
@@ -958,7 +755,7 @@ func printValue(value Value, indent int) {
 				fmt.Printf("%s  ... (%d more items)\n", prefix, len(v)-3)
 				break
 			}
-			printValue(item, indent+1)
+			PrintValue(item, indent+1)
 		}
 	case map[string]Value:
 		fmt.Printf("%sObject{%d}:\n", prefix, len(v))
@@ -969,7 +766,7 @@ func printValue(value Value, indent int) {
 				break
 			}
 			fmt.Printf("%s  \"%s\":\n", prefix, key)
-			printValue(value, indent+2)
+			PrintValue(value, indent+2)
 			count++
 		}
 	case []byte:
