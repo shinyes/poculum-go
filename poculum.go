@@ -20,7 +20,7 @@ import (
 	"unicode/utf8"
 )
 
-// 类型标识符常量
+// 类型标识符常量，长度都是一个字节
 const (
 	TypeUInt8   = 0x01
 	TypeUInt16  = 0x02
@@ -76,7 +76,7 @@ func newError(errType, message string) *PoculumError {
 	return &PoculumError{Type: errType, Message: message}
 }
 
-// Value 表示 poculum 支持的所有值类型
+// Value 表示 Poculum 支持的所有值类型
 type Value interface{}
 
 // Poculum 编码器/解码器
@@ -86,8 +86,8 @@ type Poculum struct {
 	maxContainerItems int
 }
 
-// Newpoculum 创建新的 poculum 实例
-func Newpoculum() *Poculum {
+// NewPoculum 创建新的 Poculum 实例
+func NewPoculum() *Poculum {
 	return &Poculum{
 		maxRecursionDepth: MaxRecursionDepth,
 		maxStringSize:     MaxStringSize,
@@ -95,7 +95,7 @@ func Newpoculum() *Poculum {
 	}
 }
 
-// WithLimits 创建具有自定义限制的 poculum 实例
+// WithLimits 创建具有自定义限制的 Poculum 实例
 func WithLimits(maxRecursion, maxStringSize, maxContainerItems int) *Poculum {
 	return &Poculum{
 		maxRecursionDepth: maxRecursion,
@@ -104,29 +104,29 @@ func WithLimits(maxRecursion, maxStringSize, maxContainerItems int) *Poculum {
 	}
 }
 
-// Dump 序列化值为字节数组
-func (mb *Poculum) Dump(value Value) ([]byte, error) {
+// 序列化值为字节数组
+func (poc *Poculum) dump(value Value) ([]byte, error) {
 	var buf bytes.Buffer
-	err := mb.encodeValue(value, &buf, 0)
+	err := poc.encodeValue(value, &buf, 0)
 	if err != nil {
 		return nil, err
 	}
 	return buf.Bytes(), nil
 }
 
-// Load 从字节数组反序列化值
-func (mb *Poculum) Load(data []byte) (Value, error) {
+// 从字节数组反序列化值
+func (poc *Poculum) load(data []byte) (Value, error) {
 	if len(data) == 0 {
 		return nil, nil
 	}
 
 	reader := bytes.NewReader(data)
-	return mb.decodeValue(reader, 0)
+	return poc.decodeValue(reader, 0)
 }
 
-// encodeValue 编码值到缓冲区
-func (mb *Poculum) encodeValue(value Value, buf *bytes.Buffer, depth int) error {
-	if depth > mb.maxRecursionDepth {
+// 编码值到缓冲区
+func (poc *Poculum) encodeValue(value Value, buf *bytes.Buffer, depth int) error {
+	if depth > poc.maxRecursionDepth {
 		return newError("MaxRecursionDepth", "Maximum recursion depth exceeded")
 	}
 
@@ -159,23 +159,23 @@ func (mb *Poculum) encodeValue(value Value, buf *bytes.Buffer, depth int) error 
 		// Go 的 int 类型，转换为适当的整数类型
 		if v >= 0 {
 			if v <= math.MaxUint32 {
-				return mb.encodeValue(uint32(v), buf, depth)
+				return poc.encodeValue(uint32(v), buf, depth)
 			} else {
-				return mb.encodeValue(uint64(v), buf, depth)
+				return poc.encodeValue(uint64(v), buf, depth)
 			}
 		} else {
 			if v >= math.MinInt32 {
-				return mb.encodeValue(int32(v), buf, depth)
+				return poc.encodeValue(int32(v), buf, depth)
 			} else {
-				return mb.encodeValue(int64(v), buf, depth)
+				return poc.encodeValue(int64(v), buf, depth)
 			}
 		}
 	case uint:
 		// Go 的 uint 类型
 		if v <= math.MaxUint32 {
-			return mb.encodeValue(uint32(v), buf, depth)
+			return poc.encodeValue(uint32(v), buf, depth)
 		} else {
-			return mb.encodeValue(uint64(v), buf, depth)
+			return poc.encodeValue(uint64(v), buf, depth)
 		}
 	case float32:
 		buf.WriteByte(TypeFloat32)
@@ -184,55 +184,55 @@ func (mb *Poculum) encodeValue(value Value, buf *bytes.Buffer, depth int) error 
 		buf.WriteByte(TypeFloat64)
 		binary.Write(buf, binary.BigEndian, v)
 	case string:
-		return mb.encodeString(v, buf)
-	case []Value:
-		return mb.encodeArray(v, buf, depth)
-	case []interface{}:
+		return poc.encodeString(v, buf)
+	case []Value: // 这里对应的是序列化数组的部分
+		return poc.encodeArray(v, buf, depth)
+	case []interface{}: // 这里对应的是序列化数组的部分
 		// 将 []interface{} 转换为 []Value
 		values := make([]Value, len(v))
 		for i, item := range v {
 			values[i] = item
 		}
-		return mb.encodeArray(values, buf, depth)
+		return poc.encodeArray(values, buf, depth)
 	case map[string]Value:
-		return mb.encodeObject(v, buf, depth)
+		return poc.encodeMap(v, buf, depth)
 	case map[string]interface{}:
 		// 将 map[string]interface{} 转换为 map[string]Value
 		values := make(map[string]Value)
 		for k, v := range v {
 			values[k] = v
 		}
-		return mb.encodeObject(values, buf, depth)
+		return poc.encodeMap(values, buf, depth)
 	case []byte:
-		return mb.encodeBytes(v, buf)
+		return poc.encodeBytes(v, buf)
 	case bool:
-		// 布尔值转换为整数
+		// 布尔值转换为整数来进行序列化
 		if v {
-			return mb.encodeValue(uint8(1), buf, depth)
+			return poc.encodeValue(uint8(1), buf, depth)
 		} else {
-			return mb.encodeValue(uint8(0), buf, depth)
+			return poc.encodeValue(uint8(0), buf, depth)
 		}
 	case nil:
 		// 空值不编码任何内容
 		return nil
 	default:
 		// 使用反射处理其他类型
-		return mb.encodeWithReflection(value, buf, depth)
+		return poc.encodeWithReflection(value, buf, depth)
 	}
 
 	return nil
 }
 
 // encodeWithReflection 使用反射编码未知类型
-func (mb *Poculum) encodeWithReflection(value Value, buf *bytes.Buffer, depth int) error {
+func (poc *Poculum) encodeWithReflection(value Value, buf *bytes.Buffer, depth int) error {
 	rv := reflect.ValueOf(value)
 	switch rv.Kind() {
 	case reflect.Bool:
 		// 处理布尔类型
 		if rv.Bool() {
-			return mb.encodeValue(uint8(1), buf, depth)
+			return poc.encodeValue(uint8(1), buf, depth)
 		} else {
-			return mb.encodeValue(uint8(0), buf, depth)
+			return poc.encodeValue(uint8(0), buf, depth)
 		}
 	case reflect.Slice:
 		// 处理切片类型
@@ -241,7 +241,7 @@ func (mb *Poculum) encodeWithReflection(value Value, buf *bytes.Buffer, depth in
 		for i := 0; i < length; i++ {
 			values[i] = rv.Index(i).Interface()
 		}
-		return mb.encodeArray(values, buf, depth)
+		return poc.encodeArray(values, buf, depth)
 	case reflect.Map:
 		// 处理映射类型
 		if rv.Type().Key().Kind() != reflect.String {
@@ -253,19 +253,19 @@ func (mb *Poculum) encodeWithReflection(value Value, buf *bytes.Buffer, depth in
 			value := rv.MapIndex(key).Interface()
 			values[keyStr] = value
 		}
-		return mb.encodeObject(values, buf, depth)
+		return poc.encodeMap(values, buf, depth)
 	default:
 		return newError("UnsupportedType", fmt.Sprintf("Unsupported type: %T", value))
 	}
 }
 
 // encodeString 编码字符串
-func (mb *Poculum) encodeString(s string, buf *bytes.Buffer) error {
+func (poc *Poculum) encodeString(s string, buf *bytes.Buffer) error {
 	data := []byte(s)
 	length := len(data)
 
-	if length > mb.maxStringSize {
-		return newError("DataTooLarge", fmt.Sprintf("String too long: %d bytes (max %d)", length, mb.maxStringSize))
+	if length > poc.maxStringSize {
+		return newError("DataTooLarge", fmt.Sprintf("String too long: %d bytes (max %d)", length, poc.maxStringSize))
 	}
 
 	if !utf8.Valid(data) {
@@ -292,13 +292,14 @@ func (mb *Poculum) encodeString(s string, buf *bytes.Buffer) error {
 }
 
 // encodeArray 编码数组
-func (mb *Poculum) encodeArray(arr []Value, buf *bytes.Buffer, depth int) error {
+func (poc *Poculum) encodeArray(arr []Value, buf *bytes.Buffer, depth int) error {
 	length := len(arr)
 
-	if length > mb.maxContainerItems {
-		return newError("DataTooLarge", fmt.Sprintf("Array too long: %d items (max %d)", length, mb.maxContainerItems))
+	if length > poc.maxContainerItems {
+		return newError("DataTooLarge", fmt.Sprintf("Array too long: %d items (max %d)", length, poc.maxContainerItems))
 	}
 
+	// 先把类型字节与长度写入到字节缓冲区
 	if length <= 15 {
 		// fixlist
 		buf.WriteByte(TypeFixListBase + byte(length))
@@ -312,8 +313,9 @@ func (mb *Poculum) encodeArray(arr []Value, buf *bytes.Buffer, depth int) error 
 		binary.Write(buf, binary.BigEndian, uint32(length))
 	}
 
+	// 再逐个序列化数组中的项
 	for _, item := range arr {
-		err := mb.encodeValue(item, buf, depth+1)
+		err := poc.encodeValue(item, buf, depth+1)
 		if err != nil {
 			return err
 		}
@@ -322,14 +324,15 @@ func (mb *Poculum) encodeArray(arr []Value, buf *bytes.Buffer, depth int) error 
 	return nil
 }
 
-// encodeObject 编码对象
-func (mb *Poculum) encodeObject(obj map[string]Value, buf *bytes.Buffer, depth int) error {
+// encodeMap 编码对象
+func (poc *Poculum) encodeMap(obj map[string]Value, buf *bytes.Buffer, depth int) error {
 	length := len(obj)
 
-	if length > mb.maxContainerItems {
-		return newError("DataTooLarge", fmt.Sprintf("Object too large: %d items (max %d)", length, mb.maxContainerItems))
+	if length > poc.maxContainerItems {
+		return newError("DataTooLarge", fmt.Sprintf("Object too large: %d items (max %d)", length, poc.maxContainerItems))
 	}
 
+	// 先把类型字节写入到字节缓冲区
 	if length <= 15 {
 		// fixmap
 		buf.WriteByte(TypeFixMapBase + byte(length))
@@ -342,13 +345,13 @@ func (mb *Poculum) encodeObject(obj map[string]Value, buf *bytes.Buffer, depth i
 		buf.WriteByte(TypeMap32)
 		binary.Write(buf, binary.BigEndian, uint32(length))
 	}
-
+	// 再逐个序列化键与值
 	for key, value := range obj {
-		err := mb.encodeString(key, buf)
+		err := poc.encodeString(key, buf)
 		if err != nil {
 			return err
 		}
-		err = mb.encodeValue(value, buf, depth+1)
+		err = poc.encodeValue(value, buf, depth+1)
 		if err != nil {
 			return err
 		}
@@ -358,7 +361,7 @@ func (mb *Poculum) encodeObject(obj map[string]Value, buf *bytes.Buffer, depth i
 }
 
 // encodeBytes 编码字节数据
-func (mb *Poculum) encodeBytes(data []byte, buf *bytes.Buffer) error {
+func (poc *Poculum) encodeBytes(data []byte, buf *bytes.Buffer) error {
 	length := len(data)
 
 	if length <= 0xFF {
@@ -382,8 +385,8 @@ func (mb *Poculum) encodeBytes(data []byte, buf *bytes.Buffer) error {
 }
 
 // decodeValue 从读取器解码值
-func (mb *Poculum) decodeValue(reader *bytes.Reader, depth int) (Value, error) {
-	if depth > mb.maxRecursionDepth {
+func (poc *Poculum) decodeValue(reader *bytes.Reader, depth int) (Value, error) {
+	if depth > poc.maxRecursionDepth {
 		return nil, newError("MaxRecursionDepth", "Maximum recursion depth exceeded while parsing nested structure")
 	}
 
@@ -467,7 +470,7 @@ func (mb *Poculum) decodeValue(reader *bytes.Reader, depth int) (Value, error) {
 		// 处理字符串类型
 		if typeByte >= TypeFixStringBase && typeByte <= TypeFixStringBase+15 {
 			length := int(typeByte - TypeFixStringBase)
-			return mb.decodeString(reader, length)
+			return poc.decodeString(reader, length)
 		}
 		if typeByte == TypeString16 {
 			var length uint16
@@ -475,7 +478,7 @@ func (mb *Poculum) decodeValue(reader *bytes.Reader, depth int) (Value, error) {
 			if err != nil {
 				return nil, newError("InsufficientData", "string16 length")
 			}
-			return mb.decodeString(reader, int(length))
+			return poc.decodeString(reader, int(length))
 		}
 		if typeByte == TypeString32 {
 			var length uint32
@@ -483,16 +486,16 @@ func (mb *Poculum) decodeValue(reader *bytes.Reader, depth int) (Value, error) {
 			if err != nil {
 				return nil, newError("InsufficientData", "string32 length")
 			}
-			if int(length) > mb.maxStringSize {
+			if int(length) > poc.maxStringSize {
 				return nil, newError("DataTooLarge", fmt.Sprintf("String32 length too large: %d", length))
 			}
-			return mb.decodeString(reader, int(length))
+			return poc.decodeString(reader, int(length))
 		}
 
 		// 处理数组类型
 		if typeByte >= TypeFixListBase && typeByte <= TypeFixListBase+15 {
 			length := int(typeByte - TypeFixListBase)
-			return mb.decodeArray(reader, length, depth)
+			return poc.decodeArray(reader, length, depth)
 		}
 		if typeByte == TypeList16 {
 			var length uint16
@@ -500,7 +503,7 @@ func (mb *Poculum) decodeValue(reader *bytes.Reader, depth int) (Value, error) {
 			if err != nil {
 				return nil, newError("InsufficientData", "list16 length")
 			}
-			return mb.decodeArray(reader, int(length), depth)
+			return poc.decodeArray(reader, int(length), depth)
 		}
 		if typeByte == TypeList32 {
 			var length uint32
@@ -508,13 +511,13 @@ func (mb *Poculum) decodeValue(reader *bytes.Reader, depth int) (Value, error) {
 			if err != nil {
 				return nil, newError("InsufficientData", "list32 length")
 			}
-			return mb.decodeArray(reader, int(length), depth)
+			return poc.decodeArray(reader, int(length), depth)
 		}
 
 		// 处理对象类型
 		if typeByte >= TypeFixMapBase && typeByte <= TypeFixMapBase+15 {
 			length := int(typeByte - TypeFixMapBase)
-			return mb.decodeObject(reader, length, depth)
+			return poc.decodeObject(reader, length, depth)
 		}
 		if typeByte == TypeMap16 {
 			var length uint16
@@ -522,7 +525,7 @@ func (mb *Poculum) decodeValue(reader *bytes.Reader, depth int) (Value, error) {
 			if err != nil {
 				return nil, newError("InsufficientData", "map16 length")
 			}
-			return mb.decodeObject(reader, int(length), depth)
+			return poc.decodeObject(reader, int(length), depth)
 		}
 		if typeByte == TypeMap32 {
 			var length uint32
@@ -530,7 +533,7 @@ func (mb *Poculum) decodeValue(reader *bytes.Reader, depth int) (Value, error) {
 			if err != nil {
 				return nil, newError("InsufficientData", "map32 length")
 			}
-			return mb.decodeObject(reader, int(length), depth)
+			return poc.decodeObject(reader, int(length), depth)
 		}
 
 		// 处理字节数据类型
@@ -540,7 +543,7 @@ func (mb *Poculum) decodeValue(reader *bytes.Reader, depth int) (Value, error) {
 			if err != nil {
 				return nil, newError("InsufficientData", "bytes8 length")
 			}
-			return mb.decodeBytes(reader, int(length))
+			return poc.decodeBytes(reader, int(length))
 		}
 		if typeByte == TypeBytes16 {
 			var length uint16
@@ -548,7 +551,7 @@ func (mb *Poculum) decodeValue(reader *bytes.Reader, depth int) (Value, error) {
 			if err != nil {
 				return nil, newError("InsufficientData", "bytes16 length")
 			}
-			return mb.decodeBytes(reader, int(length))
+			return poc.decodeBytes(reader, int(length))
 		}
 		if typeByte == TypeBytes32 {
 			var length uint32
@@ -556,7 +559,7 @@ func (mb *Poculum) decodeValue(reader *bytes.Reader, depth int) (Value, error) {
 			if err != nil {
 				return nil, newError("InsufficientData", "bytes32 length")
 			}
-			return mb.decodeBytes(reader, int(length))
+			return poc.decodeBytes(reader, int(length))
 		}
 
 		return nil, newError("UnknownTypeId", fmt.Sprintf("Unknown type identifier: 0x%02x", typeByte))
@@ -564,7 +567,7 @@ func (mb *Poculum) decodeValue(reader *bytes.Reader, depth int) (Value, error) {
 }
 
 // decodeString 解码字符串
-func (mb *Poculum) decodeString(reader *bytes.Reader, length int) (string, error) {
+func (poc *Poculum) decodeString(reader *bytes.Reader, length int) (string, error) {
 	if length == 0 {
 		return "", nil
 	}
@@ -583,14 +586,14 @@ func (mb *Poculum) decodeString(reader *bytes.Reader, length int) (string, error
 }
 
 // decodeArray 解码数组
-func (mb *Poculum) decodeArray(reader *bytes.Reader, length int, depth int) ([]Value, error) {
-	if length > mb.maxContainerItems {
-		return nil, newError("DataTooLarge", fmt.Sprintf("Array length too large: %d items (max %d)", length, mb.maxContainerItems))
+func (poc *Poculum) decodeArray(reader *bytes.Reader, length int, depth int) ([]Value, error) {
+	if length > poc.maxContainerItems {
+		return nil, newError("DataTooLarge", fmt.Sprintf("Array length too large: %d items (max %d)", length, poc.maxContainerItems))
 	}
 
 	arr := make([]Value, length)
 	for i := 0; i < length; i++ {
-		value, err := mb.decodeValue(reader, depth+1)
+		value, err := poc.decodeValue(reader, depth+1)
 		if err != nil {
 			return nil, err
 		}
@@ -601,15 +604,15 @@ func (mb *Poculum) decodeArray(reader *bytes.Reader, length int, depth int) ([]V
 }
 
 // decodeObject 解码对象
-func (mb *Poculum) decodeObject(reader *bytes.Reader, length int, depth int) (map[string]Value, error) {
-	if length > mb.maxContainerItems {
-		return nil, newError("DataTooLarge", fmt.Sprintf("Object length too large: %d items (max %d)", length, mb.maxContainerItems))
+func (poc *Poculum) decodeObject(reader *bytes.Reader, length int, depth int) (map[string]Value, error) {
+	if length > poc.maxContainerItems {
+		return nil, newError("DataTooLarge", fmt.Sprintf("Object length too large: %d items (max %d)", length, poc.maxContainerItems))
 	}
 
 	obj := make(map[string]Value)
 	for i := 0; i < length; i++ {
 		// 解码键
-		keyValue, err := mb.decodeValue(reader, depth+1)
+		keyValue, err := poc.decodeValue(reader, depth+1)
 		if err != nil {
 			return nil, err
 		}
@@ -619,7 +622,7 @@ func (mb *Poculum) decodeObject(reader *bytes.Reader, length int, depth int) (ma
 		}
 
 		// 解码值
-		value, err := mb.decodeValue(reader, depth+1)
+		value, err := poc.decodeValue(reader, depth+1)
 		if err != nil {
 			return nil, err
 		}
@@ -630,7 +633,7 @@ func (mb *Poculum) decodeObject(reader *bytes.Reader, length int, depth int) (ma
 }
 
 // decodeBytes 解码字节数据
-func (mb *Poculum) decodeBytes(reader *bytes.Reader, length int) ([]byte, error) {
+func (poc *Poculum) decodeBytes(reader *bytes.Reader, length int) ([]byte, error) {
 	data := make([]byte, length)
 	n, err := reader.Read(data)
 	if err != nil || n != length {
@@ -642,13 +645,13 @@ func (mb *Poculum) decodeBytes(reader *bytes.Reader, length int) ([]byte, error)
 
 // 便捷函数
 func DumpPoculum(value Value) ([]byte, error) {
-	mb := Newpoculum()
-	return mb.Dump(value)
+	mb := NewPoculum()
+	return mb.dump(value)
 }
 
 func LoadPoculum(data []byte) (Value, error) {
-	mb := Newpoculum()
-	return mb.Load(data)
+	mb := NewPoculum()
+	return mb.load(data)
 }
 
 // 主函数 - 测试和演示
@@ -708,16 +711,16 @@ func testBasicTypes() {
 		{"字节数据", []byte{72, 101, 108, 108, 111}}, // "Hello"
 	}
 
-	mb := Newpoculum()
+	mb := NewPoculum()
 
 	for _, tc := range testCases {
-		serialized, err := mb.Dump(tc.value)
+		serialized, err := mb.dump(tc.value)
 		if err != nil {
 			fmt.Printf("❌ %s: 序列化失败 - %v\n", tc.name, err)
 			continue
 		}
 
-		deserialized, err := mb.Load(serialized)
+		deserialized, err := mb.load(serialized)
 		if err != nil {
 			fmt.Printf("❌ %s: 反序列化失败 - %v\n", tc.name, err)
 			continue
@@ -737,11 +740,11 @@ func testBasicTypes() {
 		"active": uint8(1), // 布尔值作为整数
 	}
 
-	serialized, err := mb.Dump(obj)
+	serialized, err := mb.dump(obj)
 	if err != nil {
 		fmt.Printf("❌ 对象: 序列化失败 - %v\n", err)
 	} else {
-		deserialized, err := mb.Load(serialized)
+		deserialized, err := mb.load(serialized)
 		if err != nil {
 			fmt.Printf("❌ 对象: 反序列化失败 - %v\n", err)
 		} else if deepEqual(obj, deserialized) {
@@ -762,8 +765,8 @@ func testCrossPlatform(hexData string) {
 		return
 	}
 
-	mb := Newpoculum()
-	value, err := mb.Load(data)
+	mb := NewPoculum()
+	value, err := mb.load(data)
 	if err != nil {
 		fmt.Printf("❌ 反序列化失败: %v\n", err)
 		return
@@ -773,7 +776,7 @@ func testCrossPlatform(hexData string) {
 	printValue(value, 0)
 
 	// 尝试重新序列化
-	reSerialized, err := mb.Dump(value)
+	reSerialized, err := mb.dump(value)
 	if err != nil {
 		fmt.Printf("❌ 重新序列化失败: %v\n", err)
 	} else {
@@ -803,8 +806,8 @@ func testSelfCompatibility() {
 		},
 	}
 
-	mb := Newpoculum()
-	serialized, err := mb.Dump(testData)
+	mb := NewPoculum()
+	serialized, err := mb.dump(testData)
 	if err != nil {
 		fmt.Printf("❌ 序列化失败: %v\n", err)
 		return
@@ -813,7 +816,7 @@ func testSelfCompatibility() {
 	hex := bytesToHex(serialized)
 	fmt.Printf("序列化数据 (%d 字节): %s\n", len(serialized), hex[:min(32, len(hex))])
 
-	deserialized, err := mb.Load(serialized)
+	deserialized, err := mb.load(serialized)
 	if err != nil {
 		fmt.Printf("❌ 反序列化失败: %v\n", err)
 		return
@@ -831,7 +834,7 @@ func performanceTest() {
 
 	// 创建测试数据
 	testData := createPerformanceTestData()
-	mb := Newpoculum()
+	mb := NewPoculum()
 
 	iterations := 1000
 
@@ -839,14 +842,14 @@ func performanceTest() {
 	start := time.Now()
 	var serialized []byte
 	for i := 0; i < iterations; i++ {
-		serialized, _ = mb.Dump(testData)
+		serialized, _ = mb.dump(testData)
 	}
 	serializeTime := time.Since(start)
 
 	// 反序列化性能测试
 	start = time.Now()
 	for i := 0; i < iterations; i++ {
-		mb.Load(serialized)
+		mb.load(serialized)
 	}
 	deserializeTime := time.Since(start)
 
