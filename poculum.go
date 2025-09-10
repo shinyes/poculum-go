@@ -1,9 +1,3 @@
-// Package poculum 实现高效二进制序列化库 (Go 实现)
-//
-// 一个轻量级、高性能的 Go 二进制序列化库，
-// 支持多种数据类型的紧凑存储和快速解析。
-//
-// 与 Python、JavaScript、Rust 版本完全兼容
 package main
 
 import (
@@ -12,8 +6,6 @@ import (
 	"fmt"
 	"math"
 	"reflect"
-	"strings"
-	"time"
 	"unicode/utf8"
 )
 
@@ -642,143 +634,10 @@ func (poc *Poculum) decodeBytes(reader *bytes.Reader, length int) ([]byte, error
 
 // 便捷函数
 func DumpPoculum(value Value) ([]byte, error) {
-	mb := NewPoculum()
-	return mb.dump(value)
+	poc := NewPoculum()
+	return poc.dump(value)
 }
-
 func LoadPoculum(data []byte) (Value, error) {
 	mb := NewPoculum()
 	return mb.load(data)
-}
-
-// 主函数 - 测试和演示
-func main() {
-	fmt.Println("=== poculum Go 测试 ===")
-	performanceTest()
-}
-
-func performanceTest() {
-	fmt.Println("\n--- 性能测试 ---")
-
-	// 创建测试数据
-	testData := createPerformanceTestData()
-	poc := NewPoculum()
-
-	iterations := 1000
-
-	// 序列化性能测试
-	start := time.Now()
-	var serialized []byte
-	for i := 0; i < iterations; i++ {
-		serialized, _ = poc.dump(testData)
-	}
-	serializeTime := time.Since(start)
-
-	// 反序列化性能测试
-	start = time.Now()
-	for i := 0; i < iterations; i++ {
-		poc.load(serialized)
-	}
-	deserializeTime := time.Since(start)
-
-	fmt.Printf("序列化 %d 次: %.2fms (平均 %.3fms)\n",
-		iterations,
-		float64(serializeTime.Nanoseconds())/1e6,
-		float64(serializeTime.Nanoseconds())/1e6/float64(iterations))
-	fmt.Printf("反序列化 %d 次: %.2fms (平均 %.3fms)\n",
-		iterations,
-		float64(deserializeTime.Nanoseconds())/1e6,
-		float64(deserializeTime.Nanoseconds())/1e6/float64(iterations))
-	fmt.Printf("序列化后大小: %d 字节\n", len(serialized))
-}
-
-func createPerformanceTestData() map[string]Value {
-	// 创建数字数组
-	numbers := make([]Value, 1000)
-	for i := 0; i < 1000; i++ {
-		numbers[i] = uint32(i)
-	}
-
-	// 创建字符串数组
-	strings := make([]Value, 100)
-	for i := 0; i < 100; i++ {
-		strings[i] = fmt.Sprintf("test_string_%d", i)
-	}
-
-	// 创建嵌套对象
-	nested := map[string]Value{
-		"level1": map[string]Value{
-			"level2": map[string]Value{
-				"level3": map[string]Value{
-					"deep": "value",
-				},
-			},
-		},
-	}
-
-	return map[string]Value{
-		"numbers": numbers,
-		"strings": strings,
-		"nested":  nested,
-	}
-}
-
-func PrintValue(value Value, indent int) {
-	prefix := strings.Repeat("  ", indent)
-	switch v := value.(type) {
-	case uint8:
-		fmt.Printf("%sUInt8(%d)\n", prefix, v)
-	case uint16:
-		fmt.Printf("%sUInt16(%d)\n", prefix, v)
-	case uint32:
-		fmt.Printf("%sUInt32(%d)\n", prefix, v)
-	case uint64:
-		fmt.Printf("%sUInt64(%d)\n", prefix, v)
-	case int8:
-		fmt.Printf("%sInt8(%d)\n", prefix, v)
-	case int16:
-		fmt.Printf("%sInt16(%d)\n", prefix, v)
-	case int32:
-		fmt.Printf("%sInt32(%d)\n", prefix, v)
-	case int64:
-		fmt.Printf("%sInt64(%d)\n", prefix, v)
-	case float32:
-		fmt.Printf("%sFloat32(%g)\n", prefix, v)
-	case float64:
-		fmt.Printf("%sFloat64(%g)\n", prefix, v)
-	case string:
-		fmt.Printf("%sString(\"%s\")\n", prefix, v)
-	case []Value:
-		fmt.Printf("%sArray[%d]:\n", prefix, len(v))
-		for i, item := range v {
-			if i >= 3 {
-				fmt.Printf("%s  ... (%d more items)\n", prefix, len(v)-3)
-				break
-			}
-			PrintValue(item, indent+1)
-		}
-	case map[string]Value:
-		fmt.Printf("%sObject{%d}:\n", prefix, len(v))
-		count := 0
-		for key, value := range v {
-			if count >= 3 {
-				fmt.Printf("%s  ... (%d more items)\n", prefix, len(v)-3)
-				break
-			}
-			fmt.Printf("%s  \"%s\":\n", prefix, key)
-			PrintValue(value, indent+2)
-			count++
-		}
-	case []byte:
-		fmt.Printf("%sBytes[%d]: %v\n", prefix, len(v), v[:min(10, len(v))])
-	default:
-		fmt.Printf("%sUnknown(%T): %v\n", prefix, v, v)
-	}
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

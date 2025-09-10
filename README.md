@@ -1,8 +1,8 @@
-# poculum Go 实现文档
+# Poculum Go 实现文档
 
 ## 🐹 概述
 
-poculum Go 实现是一个高性能的二进制序列化库，使用 Go 语言的反射机制和类型安全特性。它提供了强类型的 API，完全支持 Go 语言特性，并与其他语言版本保持完全兼容。
+ Go 实现是一个高性能的二进制序列化库，使用 Go 语言的反射机制和类型安全特性。它提供了强类型的 API，完全支持 Go 语言特性，并与其他语言版本保持完全兼容。
 
 ## ✨ 特性
 
@@ -14,35 +14,6 @@ poculum Go 实现是一个高性能的二进制序列化库，使用 Go 语言�
 - 📊 **接口友好**: 支持 interface{} 和自定义类型
 - ⚡ **内存高效**: 优化的内存分配和复用
 - 🔧 **并发安全**: 支持多协程并发使用
-
-## 📦 安装
-
-### 模块安装
-
-```bash
-# 初始化 Go 模块
-go mod init your-project
-
-# 复制文件到项目目录
-cp main.go your-project/poculum.go
-
-# 或者直接在项目中使用
-```
-
-### 直接使用
-
-```go
-// 复制 main.go 到项目中，重命名为合适的包名
-package main // 或 package poculum
-
-import (
-    "encoding/hex"
-    "fmt"
-    "log"
-)
-
-// 使用 Dumppoculum 和 Loadpoculum 函数
-```
 
 ## 🗂️ 支持的数据类型
 
@@ -78,7 +49,7 @@ func main() {
     fmt.Println("=== 基本类型示例 ===")
     
     // 基本数据类型
-    basicData := map[string]interface{}{
+    basicData := map[string]Value{}{
         "integer":       int32(42),
         "float":         float64(3.14159),
         "boolean_true":  true,
@@ -106,4 +77,9 @@ func main() {
     
     fmt.Printf("反序列化成功: %+v\n", deserialized)
 }
+```
+
+# BenchMark BenchmarkPoculumVsJSON
+```bash
+go test -benchmem -run=^$ -bench ^BenchmarkPoculumVsJSON$ poculum-go
 ```
