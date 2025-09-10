@@ -61,34 +61,34 @@ const (
 	MaxContainerItems = 1000000           // list、map中的最多元素数量
 )
 
-// poculumError 错误类型
-type poculumError struct {
+// PoculumError 错误类型
+type PoculumError struct {
 	Type    string
 	Message string
 }
 
-func (e *poculumError) Error() string {
+func (e *PoculumError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Type, e.Message)
 }
 
 // 错误构造函数
-func newError(errType, message string) *poculumError {
-	return &poculumError{Type: errType, Message: message}
+func newError(errType, message string) *PoculumError {
+	return &PoculumError{Type: errType, Message: message}
 }
 
 // Value 表示 poculum 支持的所有值类型
 type Value interface{}
 
-// poculum 编码器/解码器
-type poculum struct {
+// Poculum 编码器/解码器
+type Poculum struct {
 	maxRecursionDepth int
 	maxStringSize     int
 	maxContainerItems int
 }
 
 // Newpoculum 创建新的 poculum 实例
-func Newpoculum() *poculum {
-	return &poculum{
+func Newpoculum() *Poculum {
+	return &Poculum{
 		maxRecursionDepth: MaxRecursionDepth,
 		maxStringSize:     MaxStringSize,
 		maxContainerItems: MaxContainerItems,
@@ -96,8 +96,8 @@ func Newpoculum() *poculum {
 }
 
 // WithLimits 创建具有自定义限制的 poculum 实例
-func WithLimits(maxRecursion, maxStringSize, maxContainerItems int) *poculum {
-	return &poculum{
+func WithLimits(maxRecursion, maxStringSize, maxContainerItems int) *Poculum {
+	return &Poculum{
 		maxRecursionDepth: maxRecursion,
 		maxStringSize:     maxStringSize,
 		maxContainerItems: maxContainerItems,
@@ -105,7 +105,7 @@ func WithLimits(maxRecursion, maxStringSize, maxContainerItems int) *poculum {
 }
 
 // Dump 序列化值为字节数组
-func (mb *poculum) Dump(value Value) ([]byte, error) {
+func (mb *Poculum) Dump(value Value) ([]byte, error) {
 	var buf bytes.Buffer
 	err := mb.encodeValue(value, &buf, 0)
 	if err != nil {
@@ -115,7 +115,7 @@ func (mb *poculum) Dump(value Value) ([]byte, error) {
 }
 
 // Load 从字节数组反序列化值
-func (mb *poculum) Load(data []byte) (Value, error) {
+func (mb *Poculum) Load(data []byte) (Value, error) {
 	if len(data) == 0 {
 		return nil, nil
 	}
@@ -125,7 +125,7 @@ func (mb *poculum) Load(data []byte) (Value, error) {
 }
 
 // encodeValue 编码值到缓冲区
-func (mb *poculum) encodeValue(value Value, buf *bytes.Buffer, depth int) error {
+func (mb *Poculum) encodeValue(value Value, buf *bytes.Buffer, depth int) error {
 	if depth > mb.maxRecursionDepth {
 		return newError("MaxRecursionDepth", "Maximum recursion depth exceeded")
 	}
@@ -224,7 +224,7 @@ func (mb *poculum) encodeValue(value Value, buf *bytes.Buffer, depth int) error 
 }
 
 // encodeWithReflection 使用反射编码未知类型
-func (mb *poculum) encodeWithReflection(value Value, buf *bytes.Buffer, depth int) error {
+func (mb *Poculum) encodeWithReflection(value Value, buf *bytes.Buffer, depth int) error {
 	rv := reflect.ValueOf(value)
 	switch rv.Kind() {
 	case reflect.Bool:
@@ -260,7 +260,7 @@ func (mb *poculum) encodeWithReflection(value Value, buf *bytes.Buffer, depth in
 }
 
 // encodeString 编码字符串
-func (mb *poculum) encodeString(s string, buf *bytes.Buffer) error {
+func (mb *Poculum) encodeString(s string, buf *bytes.Buffer) error {
 	data := []byte(s)
 	length := len(data)
 
@@ -292,7 +292,7 @@ func (mb *poculum) encodeString(s string, buf *bytes.Buffer) error {
 }
 
 // encodeArray 编码数组
-func (mb *poculum) encodeArray(arr []Value, buf *bytes.Buffer, depth int) error {
+func (mb *Poculum) encodeArray(arr []Value, buf *bytes.Buffer, depth int) error {
 	length := len(arr)
 
 	if length > mb.maxContainerItems {
@@ -323,7 +323,7 @@ func (mb *poculum) encodeArray(arr []Value, buf *bytes.Buffer, depth int) error 
 }
 
 // encodeObject 编码对象
-func (mb *poculum) encodeObject(obj map[string]Value, buf *bytes.Buffer, depth int) error {
+func (mb *Poculum) encodeObject(obj map[string]Value, buf *bytes.Buffer, depth int) error {
 	length := len(obj)
 
 	if length > mb.maxContainerItems {
@@ -358,7 +358,7 @@ func (mb *poculum) encodeObject(obj map[string]Value, buf *bytes.Buffer, depth i
 }
 
 // encodeBytes 编码字节数据
-func (mb *poculum) encodeBytes(data []byte, buf *bytes.Buffer) error {
+func (mb *Poculum) encodeBytes(data []byte, buf *bytes.Buffer) error {
 	length := len(data)
 
 	if length <= 0xFF {
@@ -382,7 +382,7 @@ func (mb *poculum) encodeBytes(data []byte, buf *bytes.Buffer) error {
 }
 
 // decodeValue 从读取器解码值
-func (mb *poculum) decodeValue(reader *bytes.Reader, depth int) (Value, error) {
+func (mb *Poculum) decodeValue(reader *bytes.Reader, depth int) (Value, error) {
 	if depth > mb.maxRecursionDepth {
 		return nil, newError("MaxRecursionDepth", "Maximum recursion depth exceeded while parsing nested structure")
 	}
@@ -564,7 +564,7 @@ func (mb *poculum) decodeValue(reader *bytes.Reader, depth int) (Value, error) {
 }
 
 // decodeString 解码字符串
-func (mb *poculum) decodeString(reader *bytes.Reader, length int) (string, error) {
+func (mb *Poculum) decodeString(reader *bytes.Reader, length int) (string, error) {
 	if length == 0 {
 		return "", nil
 	}
@@ -583,7 +583,7 @@ func (mb *poculum) decodeString(reader *bytes.Reader, length int) (string, error
 }
 
 // decodeArray 解码数组
-func (mb *poculum) decodeArray(reader *bytes.Reader, length int, depth int) ([]Value, error) {
+func (mb *Poculum) decodeArray(reader *bytes.Reader, length int, depth int) ([]Value, error) {
 	if length > mb.maxContainerItems {
 		return nil, newError("DataTooLarge", fmt.Sprintf("Array length too large: %d items (max %d)", length, mb.maxContainerItems))
 	}
@@ -601,7 +601,7 @@ func (mb *poculum) decodeArray(reader *bytes.Reader, length int, depth int) ([]V
 }
 
 // decodeObject 解码对象
-func (mb *poculum) decodeObject(reader *bytes.Reader, length int, depth int) (map[string]Value, error) {
+func (mb *Poculum) decodeObject(reader *bytes.Reader, length int, depth int) (map[string]Value, error) {
 	if length > mb.maxContainerItems {
 		return nil, newError("DataTooLarge", fmt.Sprintf("Object length too large: %d items (max %d)", length, mb.maxContainerItems))
 	}
@@ -630,7 +630,7 @@ func (mb *poculum) decodeObject(reader *bytes.Reader, length int, depth int) (ma
 }
 
 // decodeBytes 解码字节数据
-func (mb *poculum) decodeBytes(reader *bytes.Reader, length int) ([]byte, error) {
+func (mb *Poculum) decodeBytes(reader *bytes.Reader, length int) ([]byte, error) {
 	data := make([]byte, length)
 	n, err := reader.Read(data)
 	if err != nil || n != length {
@@ -641,12 +641,12 @@ func (mb *poculum) decodeBytes(reader *bytes.Reader, length int) ([]byte, error)
 }
 
 // 便捷函数
-func Dumppoculum(value Value) ([]byte, error) {
+func DumpPoculum(value Value) ([]byte, error) {
 	mb := Newpoculum()
 	return mb.Dump(value)
 }
 
-func Loadpoculum(data []byte) (Value, error) {
+func LoadPoculum(data []byte) (Value, error) {
 	mb := Newpoculum()
 	return mb.Load(data)
 }
@@ -675,13 +675,13 @@ func main() {
 
 func testBoolEncoding() {
 	// 测试布尔值编码
-	trueData, err := Dumppoculum(true)
+	trueData, err := DumpPoculum(true)
 	if err != nil {
 		fmt.Printf("编码 true 失败: %v\n", err)
 		return
 	}
 
-	falseData, err := Dumppoculum(false)
+	falseData, err := DumpPoculum(false)
 	if err != nil {
 		fmt.Printf("编码 false 失败: %v\n", err)
 		return

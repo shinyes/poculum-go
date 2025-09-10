@@ -90,7 +90,7 @@ func main() {
     }
     
     // 序列化
-    serialized, err := Dumppoculum(basicData)
+    serialized, err := DumpPoculum(basicData)
     if err != nil {
         log.Fatal("序列化失败:", err)
     }
@@ -99,7 +99,7 @@ func main() {
     fmt.Printf("十六进制: %x\n", serialized)
     
     // 反序列化
-    deserialized, err := Loadpoculum(serialized)
+    deserialized, err := LoadPoculum(serialized)
     if err != nil {
         log.Fatal("反序列化失败:", err)
     }
@@ -107,14 +107,3 @@ func main() {
     fmt.Printf("反序列化成功: %+v\n", deserialized)
 }
 ```
-
-## 🔗 相关链接
-
-- [主文档](README.md)
-- [Python 文档](README_PYTHON.md)
-- [JavaScript 文档](README_JS.md)
-- [Rust 文档](README_RUST.md)
-
----
-
-*poculum Go 实现 - 高性能、类型安全、并发友好* 🐹⚡
