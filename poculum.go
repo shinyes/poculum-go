@@ -1,4 +1,4 @@
-// Package messagebox 实现高效二进制序列化库 (Go 实现)
+// Package poculum 实现高效二进制序列化库 (Go 实现)
 //
 // 一个轻量级、高性能的 Go 二进制序列化库，
 // 支持多种数据类型的紧凑存储和快速解析。
@@ -56,48 +56,48 @@ const (
 
 // 安全限制常量
 const (
-	MaxRecursionDepth = 100
+	MaxRecursionDepth = 100               // list、map的最大嵌套深度
 	MaxStringSize     = 100 * 1024 * 1024 // 100MB
-	MaxContainerItems = 1000000
+	MaxContainerItems = 1000000           // list、map中的最多元素数量
 )
 
-// MessageBoxError 错误类型
-type MessageBoxError struct {
+// poculumError 错误类型
+type poculumError struct {
 	Type    string
 	Message string
 }
 
-func (e *MessageBoxError) Error() string {
+func (e *poculumError) Error() string {
 	return fmt.Sprintf("%s: %s", e.Type, e.Message)
 }
 
 // 错误构造函数
-func newError(errType, message string) *MessageBoxError {
-	return &MessageBoxError{Type: errType, Message: message}
+func newError(errType, message string) *poculumError {
+	return &poculumError{Type: errType, Message: message}
 }
 
-// Value 表示 MessageBox 支持的所有值类型
+// Value 表示 poculum 支持的所有值类型
 type Value interface{}
 
-// MessageBox 编码器/解码器
-type MessageBox struct {
+// poculum 编码器/解码器
+type poculum struct {
 	maxRecursionDepth int
 	maxStringSize     int
 	maxContainerItems int
 }
 
-// NewMessageBox 创建新的 MessageBox 实例
-func NewMessageBox() *MessageBox {
-	return &MessageBox{
+// Newpoculum 创建新的 poculum 实例
+func Newpoculum() *poculum {
+	return &poculum{
 		maxRecursionDepth: MaxRecursionDepth,
 		maxStringSize:     MaxStringSize,
 		maxContainerItems: MaxContainerItems,
 	}
 }
 
-// WithLimits 创建具有自定义限制的 MessageBox 实例
-func WithLimits(maxRecursion, maxStringSize, maxContainerItems int) *MessageBox {
-	return &MessageBox{
+// WithLimits 创建具有自定义限制的 poculum 实例
+func WithLimits(maxRecursion, maxStringSize, maxContainerItems int) *poculum {
+	return &poculum{
 		maxRecursionDepth: maxRecursion,
 		maxStringSize:     maxStringSize,
 		maxContainerItems: maxContainerItems,
@@ -105,7 +105,7 @@ func WithLimits(maxRecursion, maxStringSize, maxContainerItems int) *MessageBox 
 }
 
 // Dump 序列化值为字节数组
-func (mb *MessageBox) Dump(value Value) ([]byte, error) {
+func (mb *poculum) Dump(value Value) ([]byte, error) {
 	var buf bytes.Buffer
 	err := mb.encodeValue(value, &buf, 0)
 	if err != nil {
@@ -115,7 +115,7 @@ func (mb *MessageBox) Dump(value Value) ([]byte, error) {
 }
 
 // Load 从字节数组反序列化值
-func (mb *MessageBox) Load(data []byte) (Value, error) {
+func (mb *poculum) Load(data []byte) (Value, error) {
 	if len(data) == 0 {
 		return nil, nil
 	}
@@ -125,7 +125,7 @@ func (mb *MessageBox) Load(data []byte) (Value, error) {
 }
 
 // encodeValue 编码值到缓冲区
-func (mb *MessageBox) encodeValue(value Value, buf *bytes.Buffer, depth int) error {
+func (mb *poculum) encodeValue(value Value, buf *bytes.Buffer, depth int) error {
 	if depth > mb.maxRecursionDepth {
 		return newError("MaxRecursionDepth", "Maximum recursion depth exceeded")
 	}
@@ -224,7 +224,7 @@ func (mb *MessageBox) encodeValue(value Value, buf *bytes.Buffer, depth int) err
 }
 
 // encodeWithReflection 使用反射编码未知类型
-func (mb *MessageBox) encodeWithReflection(value Value, buf *bytes.Buffer, depth int) error {
+func (mb *poculum) encodeWithReflection(value Value, buf *bytes.Buffer, depth int) error {
 	rv := reflect.ValueOf(value)
 	switch rv.Kind() {
 	case reflect.Bool:
@@ -260,7 +260,7 @@ func (mb *MessageBox) encodeWithReflection(value Value, buf *bytes.Buffer, depth
 }
 
 // encodeString 编码字符串
-func (mb *MessageBox) encodeString(s string, buf *bytes.Buffer) error {
+func (mb *poculum) encodeString(s string, buf *bytes.Buffer) error {
 	data := []byte(s)
 	length := len(data)
 
@@ -292,7 +292,7 @@ func (mb *MessageBox) encodeString(s string, buf *bytes.Buffer) error {
 }
 
 // encodeArray 编码数组
-func (mb *MessageBox) encodeArray(arr []Value, buf *bytes.Buffer, depth int) error {
+func (mb *poculum) encodeArray(arr []Value, buf *bytes.Buffer, depth int) error {
 	length := len(arr)
 
 	if length > mb.maxContainerItems {
@@ -323,7 +323,7 @@ func (mb *MessageBox) encodeArray(arr []Value, buf *bytes.Buffer, depth int) err
 }
 
 // encodeObject 编码对象
-func (mb *MessageBox) encodeObject(obj map[string]Value, buf *bytes.Buffer, depth int) error {
+func (mb *poculum) encodeObject(obj map[string]Value, buf *bytes.Buffer, depth int) error {
 	length := len(obj)
 
 	if length > mb.maxContainerItems {
@@ -358,7 +358,7 @@ func (mb *MessageBox) encodeObject(obj map[string]Value, buf *bytes.Buffer, dept
 }
 
 // encodeBytes 编码字节数据
-func (mb *MessageBox) encodeBytes(data []byte, buf *bytes.Buffer) error {
+func (mb *poculum) encodeBytes(data []byte, buf *bytes.Buffer) error {
 	length := len(data)
 
 	if length <= 0xFF {
@@ -382,7 +382,7 @@ func (mb *MessageBox) encodeBytes(data []byte, buf *bytes.Buffer) error {
 }
 
 // decodeValue 从读取器解码值
-func (mb *MessageBox) decodeValue(reader *bytes.Reader, depth int) (Value, error) {
+func (mb *poculum) decodeValue(reader *bytes.Reader, depth int) (Value, error) {
 	if depth > mb.maxRecursionDepth {
 		return nil, newError("MaxRecursionDepth", "Maximum recursion depth exceeded while parsing nested structure")
 	}
@@ -564,7 +564,7 @@ func (mb *MessageBox) decodeValue(reader *bytes.Reader, depth int) (Value, error
 }
 
 // decodeString 解码字符串
-func (mb *MessageBox) decodeString(reader *bytes.Reader, length int) (string, error) {
+func (mb *poculum) decodeString(reader *bytes.Reader, length int) (string, error) {
 	if length == 0 {
 		return "", nil
 	}
@@ -583,7 +583,7 @@ func (mb *MessageBox) decodeString(reader *bytes.Reader, length int) (string, er
 }
 
 // decodeArray 解码数组
-func (mb *MessageBox) decodeArray(reader *bytes.Reader, length int, depth int) ([]Value, error) {
+func (mb *poculum) decodeArray(reader *bytes.Reader, length int, depth int) ([]Value, error) {
 	if length > mb.maxContainerItems {
 		return nil, newError("DataTooLarge", fmt.Sprintf("Array length too large: %d items (max %d)", length, mb.maxContainerItems))
 	}
@@ -601,7 +601,7 @@ func (mb *MessageBox) decodeArray(reader *bytes.Reader, length int, depth int) (
 }
 
 // decodeObject 解码对象
-func (mb *MessageBox) decodeObject(reader *bytes.Reader, length int, depth int) (map[string]Value, error) {
+func (mb *poculum) decodeObject(reader *bytes.Reader, length int, depth int) (map[string]Value, error) {
 	if length > mb.maxContainerItems {
 		return nil, newError("DataTooLarge", fmt.Sprintf("Object length too large: %d items (max %d)", length, mb.maxContainerItems))
 	}
@@ -630,7 +630,7 @@ func (mb *MessageBox) decodeObject(reader *bytes.Reader, length int, depth int) 
 }
 
 // decodeBytes 解码字节数据
-func (mb *MessageBox) decodeBytes(reader *bytes.Reader, length int) ([]byte, error) {
+func (mb *poculum) decodeBytes(reader *bytes.Reader, length int) ([]byte, error) {
 	data := make([]byte, length)
 	n, err := reader.Read(data)
 	if err != nil || n != length {
@@ -641,19 +641,19 @@ func (mb *MessageBox) decodeBytes(reader *bytes.Reader, length int) ([]byte, err
 }
 
 // 便捷函数
-func DumpMessageBox(value Value) ([]byte, error) {
-	mb := NewMessageBox()
+func Dumppoculum(value Value) ([]byte, error) {
+	mb := Newpoculum()
 	return mb.Dump(value)
 }
 
-func LoadMessageBox(data []byte) (Value, error) {
-	mb := NewMessageBox()
+func Loadpoculum(data []byte) (Value, error) {
+	mb := Newpoculum()
 	return mb.Load(data)
 }
 
 // 主函数 - 测试和演示
 func main() {
-	fmt.Println("=== MessageBox Go 测试 ===")
+	fmt.Println("=== poculum Go 测试 ===")
 
 	// 布尔值编码测试
 	fmt.Println("\n--- 布尔值编码测试 ---")
@@ -675,13 +675,13 @@ func main() {
 
 func testBoolEncoding() {
 	// 测试布尔值编码
-	trueData, err := DumpMessageBox(true)
+	trueData, err := Dumppoculum(true)
 	if err != nil {
 		fmt.Printf("编码 true 失败: %v\n", err)
 		return
 	}
 
-	falseData, err := DumpMessageBox(false)
+	falseData, err := Dumppoculum(false)
 	if err != nil {
 		fmt.Printf("编码 false 失败: %v\n", err)
 		return
@@ -708,7 +708,7 @@ func testBasicTypes() {
 		{"字节数据", []byte{72, 101, 108, 108, 111}}, // "Hello"
 	}
 
-	mb := NewMessageBox()
+	mb := Newpoculum()
 
 	for _, tc := range testCases {
 		serialized, err := mb.Dump(tc.value)
@@ -762,7 +762,7 @@ func testCrossPlatform(hexData string) {
 		return
 	}
 
-	mb := NewMessageBox()
+	mb := Newpoculum()
 	value, err := mb.Load(data)
 	if err != nil {
 		fmt.Printf("❌ 反序列化失败: %v\n", err)
@@ -803,7 +803,7 @@ func testSelfCompatibility() {
 		},
 	}
 
-	mb := NewMessageBox()
+	mb := Newpoculum()
 	serialized, err := mb.Dump(testData)
 	if err != nil {
 		fmt.Printf("❌ 序列化失败: %v\n", err)
@@ -831,7 +831,7 @@ func performanceTest() {
 
 	// 创建测试数据
 	testData := createPerformanceTestData()
-	mb := NewMessageBox()
+	mb := Newpoculum()
 
 	iterations := 1000
 
