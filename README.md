@@ -25,20 +25,11 @@ Poculum 一种支持int、uint、float32、float64、list（元素类型可以�
 - **切片**: `[]T` - 任意类型的切片
 - **数组**: `[N]T` - 固定长度数组
 - **映射**: `map[string]T` - 字符串键的映射
-<<<<<<< HEAD
 - **接口**: `interface{}` - 任意类型，但具体类型局限在上面所说的数据类型中
-=======
-- ~~**结构体**: `struct` - 自定义结构体 (通过反射)~~
-- **接口**: `interface{}` - 任意类型
->>>>>>> 4a8162772037d1de5f34c349e4098890df1f720d
 
 ## 快速开始
 
-<<<<<<< HEAD
 除了下面的例子之外，还可以使用 WithLimits 创建具有自定义限制的 Poculum 实例。
-=======
-## 快速开始
->>>>>>> 4a8162772037d1de5f34c349e4098890df1f720d
 
 ```go
 package main
@@ -71,11 +62,7 @@ func main() {
 	}
 
 	// 序列化
-<<<<<<< HEAD
 	serialized, err := poculum.DumpPoculum(basicData)
-=======
-	serialized, err := DumpPoculum(basicData)
->>>>>>> 4a8162772037d1de5f34c349e4098890df1f720d
 	if err != nil {
 		log.Fatal("序列化失败:", err)
 	}
@@ -84,11 +71,7 @@ func main() {
 	fmt.Printf("十六进制: %x\n", serialized)
 
 	// 反序列化
-<<<<<<< HEAD
 	deserialized, err := poculum.LoadPoculum(serialized)
-=======
-	deserialized, err := LoadPoculum(serialized)
->>>>>>> 4a8162772037d1de5f34c349e4098890df1f720d
 	if err != nil {
 		log.Fatal("反序列化失败:", err)
 	}
