@@ -2,9 +2,10 @@ package main
 
 import (
 	"encoding/json"
-	poculum "poculum-go/pkg"
 	"strings"
 	"testing"
+
+	poculum "github.com/shinyes/poculum-go/pkg"
 )
 
 func BenchmarkPoculumVsJSON(b *testing.B) {

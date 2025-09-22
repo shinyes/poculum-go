@@ -4,7 +4,7 @@ import (
 	"fmt"
 	"log"
 
-	poculum "poculum-go/pkg"
+	poculum "github.com/shinyes/poculum-go/pkg"
 )
 
 func main() {

@@ -38,7 +38,7 @@ import (
 	"fmt"
 	"log"
 
-	poculum "poculum-go/pkg"
+	poculum "github.com/shinyes/poculum-go/pkg"
 )
 
 func main() {
@@ -78,6 +78,7 @@ func main() {
 
 	fmt.Printf("反序列化成功: %+v\n", deserialized)
 }
+
 ```
 
 # BenchMark BenchmarkPoculumVsJSON
